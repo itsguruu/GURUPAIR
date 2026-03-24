@@ -12,7 +12,7 @@ import {
     fetchLatestBaileysVersion,
     DisconnectReason
 } from '@whiskeysockets/baileys';
-import uploadToPastebin from './Paste.js';
+// Remove: import uploadToPastebin from './Paste.js';
 
 const router = express.Router();
 const MAX_RECONNECT_ATTEMPTS = 3;
@@ -23,17 +23,71 @@ const MESSAGE = `
 *SESSION GENERATED SUCCESSFULLY* ✅
 
 *Gɪᴠᴇ ᴀ ꜱᴛᴀʀ ᴛᴏ ʀᴇᴘᴏ ꜰᴏʀ ᴄᴏᴜʀᴀɢᴇ* 🌟
-https://github.com/GlobalTechInfo/MEGA-MD
+https://github.com/itsguruu/GURUPAIR
 
 *Sᴜᴘᴘᴏʀᴛ Gʀᴏᴜᴘ ꜰᴏʀ ϙᴜᴇʀʏ* 💭
-https://t.me/Global_TechInfo
-https://whatsapp.com/channel/0029VagJIAr3bbVBCpEkAM07
+https://t.me/itsguruu
+https://whatsapp.com/channel/your-channel-link
 
 *Yᴏᴜ-ᴛᴜʙᴇ ᴛᴜᴛᴏʀɪᴀʟꜱ* 🪄 
-https://youtube.com/@GlobalTechInfo
+https://youtube.com/@itsguruu
 
-*MEGA-MD--WHATSAPP* 🥀
+*GURU MD - WHATSAPP BOT* 🥀
 `;
+
+// NEW FUNCTION: Generate Base64 Session ID
+function generateBase64Session(credsData, botName = 'GURU') {
+    try {
+        // Convert credentials to Base64
+        const base64String = Buffer.from(JSON.stringify(credsData)).toString('base64');
+        // Format: GURU~[base64 string]
+        const sessionId = `${botName}~${base64String}`;
+        return sessionId;
+    } catch (error) {
+        console.error('Error generating Base64 session:', error);
+        throw error;
+    }
+}
+
+// NEW FUNCTION: Save credentials from Base64 session (for future use)
+export function decodeBase64Session(sessionId) {
+    try {
+        // Check if session ID starts with GURU~
+        if (!sessionId.startsWith('GURU~')) {
+            throw new Error('Invalid session format - must start with GURU~');
+        }
+        
+        // Extract Base64 part after the prefix
+        const base64Data = sessionId.substring(5); // Remove "GURU~"
+        
+        // Decode Base64 to JSON
+        const jsonString = Buffer.from(base64Data, 'base64').toString('utf-8');
+        const credsData = JSON.parse(jsonString);
+        
+        return credsData;
+    } catch (error) {
+        console.error('Error decoding Base64 session:', error);
+        return null;
+    }
+}
+
+// NEW FUNCTION: Save credentials to file from Base64 session
+export async function saveCredsFromBase64(sessionId, dirs) {
+    try {
+        const credsData = decodeBase64Session(sessionId);
+        if (!credsData) {
+            throw new Error('Failed to decode session ID');
+        }
+        
+        const credsPath = `${dirs}/creds.json`;
+        await fs.writeJson(credsPath, credsData, { spaces: 2 });
+        console.log('✅ Credentials saved from Base64 session');
+        return credsData;
+    } catch (error) {
+        console.error('Error saving credentials from Base64:', error);
+        throw error;
+    }
+}
 
 async function removeFile(FilePath) {
     try {
@@ -72,6 +126,7 @@ router.get('/', async (req, res) => {
     let reconnectAttempts = 0;
     let currentSocket = null;
     let timeoutHandle = null;
+    let generatedSessionId = null;
 
     async function cleanup(reason = 'unknown') {
         if (isCleaningUp) return;
@@ -165,18 +220,50 @@ router.get('/', async (req, res) => {
                     try {
                         const credsFile = `${dirs}/creds.json`;
                         if (fs.existsSync(credsFile)) {
-                            console.log(`📄 Uploading creds.json for ${num} to Pastebin...`);
-                            const pastebinUrl = await uploadToPastebin(credsFile, 'creds.json', 'json', '1');
-                            console.log('✅ Session uploaded to Pastebin:', pastebinUrl);
-
+                            console.log(`📄 Reading creds.json for ${num}...`);
+                            
+                            // Read the credentials file
+                            const credsData = await fs.readJson(credsFile);
+                            
+                            // Generate Base64 session ID
+                            generatedSessionId = generateBase64Session(credsData, 'GURU');
+                            console.log('✅ Base64 Session ID generated successfully!');
+                            console.log('📱 Session ID (starts with GURU~):', generatedSessionId.substring(0, 50) + '...');
+                            
+                            // Send the session ID to the user's WhatsApp
                             const userJid = jidNormalizedUser(num + '@s.whatsapp.net');
-                            const msg = await sock.sendMessage(userJid, { text: pastebinUrl });
-                            await sock.sendMessage(userJid, { text: MESSAGE, quoted: msg });
+                            
+                            // Format the message with the session ID
+                            const sessionMessage = `
+*✨ GURU MD SESSION GENERATED ✨*
 
+*Your Session ID:* 
+\`${generatedSessionId}\`
+
+*⚠️ IMPORTANT:*
+1. Copy the complete session ID above
+2. Add it to your environment variables as SESSION_ID
+3. Restart your bot
+
+*📝 Example:*
+SESSION_ID=${generatedSessionId}
+
+${MESSAGE}
+`;
+                            
+                            const msg = await sock.sendMessage(userJid, { text: sessionMessage });
+                            
+                            // Also send a smaller version as a quoted message
+                            await sock.sendMessage(userJid, { 
+                                text: `🔑 *Session ID:* \`${generatedSessionId}\``,
+                                quoted: msg 
+                            });
+                            
+                            console.log(`✅ Session ID sent to ${num}`);
                             await delay(1000);
                         }
                     } catch (err) {
-                        console.error('Error sending session:', err);
+                        console.error('Error generating/sending Base64 session:', err);
                     } finally {
                         await cleanup('session_complete');
                     }

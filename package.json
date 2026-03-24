@@ -2,7 +2,7 @@
   "name": "pairing-web",
   "version": "2.0.0",
   "type": "module",
-  "description": "A multi-functional WhatsApp bot Pairing Web and QR Scanner with Base64 Session ID.",
+  "description": "WhatsApp bot pairing system with Base64 session ID generation",
   "main": "index.js",
   "engines": {
     "node": ">=20.0.0"
@@ -11,10 +11,7 @@
     "start": "node index.js",
     "dev": "nodemon index.js"
   },
-  "keywords": [
-    "baileysQr", "MdLogin", "GURU-MD", "whatsapp-bot", "BotWhatsapp", "whatsapp-web", "whatsapp", "session", "pair-code", "express-pairing", "whatsappbot", "express-session", "whatsapp-api", "pairing", "baileys-md", "baileys-bot",
-    "whatsappLogin", "adiwajshing/baileys", "baileys-md-qr", "multi-device-qr", "whiskey sockets/baileys", "md-pair", "bot-pair", "baileysQrScanner", "botpairing", "WhatsAppPairing", "LinkDevice", "base64-session"
-  ],
+  "keywords": ["baileys", "whatsapp-bot", "pairing", "base64-session", "guru-md"],
   "author": "itsguruu",
   "license": "MIT",
   "dependencies": {

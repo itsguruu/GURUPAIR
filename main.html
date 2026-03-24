@@ -1,477 +1,625 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MEGA-MD • WhatsApp Session</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>GURU MD • Premium WhatsApp Session Manager</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    :root {
-      --bg: #050508;
-      --surface: rgba(255,255,255,0.03);
-      --border: rgba(255,255,255,0.07);
-      --neon: #00ff88;
-      --neon2: #00cfff;
-      --tg: #2CA5E0;
-      --text: #e8eaf0;
-      --muted: rgba(232,234,240,0.4);
-    }
+        :root {
+            --bg-primary: #0a0c0f;
+            --bg-secondary: #0f1115;
+            --bg-card: rgba(18, 22, 28, 0.7);
+            --border-light: rgba(255, 255, 255, 0.08);
+            --border-glow: rgba(0, 255, 136, 0.3);
+            --accent-primary: #00ff88;
+            --accent-secondary: #00c3ff;
+            --accent-purple: #a855f7;
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --text-muted: rgba(255, 255, 255, 0.4);
+            --gradient-1: linear-gradient(135deg, #00ff88 0%, #00c3ff 100%);
+            --gradient-2: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
+            --shadow-sm: 0 4px 20px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 8px 30px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.5);
+            --shadow-glow: 0 0 20px rgba(0, 255, 136, 0.2);
+        }
 
-    html { width: 100%; min-height: 100%; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Syne', sans-serif;
-      min-height: 100vh;
-      overflow-x: hidden;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-    }
+        /* Animated Background */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            overflow: hidden;
+        }
 
-    #bg-canvas {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
-    }
+        .gradient-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.5;
+            animation: float 20s ease-in-out infinite;
+        }
 
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-      pointer-events: none;
-      z-index: 1;
-      opacity: 0.6;
-    }
+        .orb-1 {
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(0, 255, 136, 0.4), transparent);
+            top: -200px;
+            left: -200px;
+            animation-delay: 0s;
+        }
 
-    .orb {
-      position: fixed;
-      border-radius: 50%;
-      filter: blur(120px);
-      pointer-events: none;
-      z-index: 0;
-    }
-    .orb-1 {
-      width: 600px; height: 600px;
-      background: radial-gradient(circle, rgba(0,255,136,0.1), transparent 70%);
-      top: -200px; left: -200px;
-      animation: drift1 18s ease-in-out infinite alternate;
-    }
-    .orb-2 {
-      width: 500px; height: 500px;
-      background: radial-gradient(circle, rgba(0,207,255,0.09), transparent 70%);
-      bottom: -150px; right: -150px;
-      animation: drift2 22s ease-in-out infinite alternate;
-    }
-    .orb-3 {
-      width: 350px; height: 350px;
-      background: radial-gradient(circle, rgba(162,89,255,0.07), transparent 70%);
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      animation: drift3 15s ease-in-out infinite alternate;
-    }
+        .orb-2 {
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(0, 195, 255, 0.3), transparent);
+            bottom: -150px;
+            right: -150px;
+            animation-delay: -5s;
+        }
 
-    @keyframes drift1 { to { transform: translate(100px, 80px); } }
-    @keyframes drift2 { to { transform: translate(-80px, -100px); } }
-    @keyframes drift3 { to { transform: translate(-50%, -50%) scale(1.4); } }
+        .orb-3 {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(168, 85, 247, 0.3), transparent);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation-delay: -10s;
+        }
 
-    /* ── WRAPPER ── */
-    .wrapper {
-      position: relative;
-      z-index: 2;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: clamp(48px, 8vh, 80px) clamp(16px, 4vw, 32px) clamp(48px, 8vh, 80px);
-      width: 100%;
-      max-width: 720px;
-    }
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(50px, -50px) scale(1.1); }
+            66% { transform: translate(-50px, 50px) scale(0.9); }
+        }
 
-    .badge {
-      font-family: 'DM Mono', monospace;
-      font-size: 11px;
-      font-weight: 300;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      color: var(--neon);
-      background: rgba(0,255,136,0.08);
-      border: 1px solid rgba(0,255,136,0.2);
-      padding: 6px 18px;
-      border-radius: 100px;
-      margin-bottom: 32px;
-      animation: fadeUp 0.6s ease both;
-      animation-delay: 0.1s;
-    }
+        .grid-pattern {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 255, 136, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 136, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: 0;
+        }
 
-    .brand {
-      text-align: center;
-      margin-bottom: 16px;
-      animation: fadeUp 0.6s ease both;
-      animation-delay: 0.2s;
-    }
+        /* Main Container */
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-    .brand-name {
-      font-size: clamp(3.5rem, 10vw, 6.5rem);
-      font-weight: 800;
-      line-height: 1;
-      letter-spacing: -3px;
-      background: linear-gradient(135deg, #ffffff 0%, rgba(255,255,255,0.55) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
+        /* Content Wrapper */
+        .content {
+            width: 100%;
+            max-width: 800px;
+        }
 
-    .brand-name .accent {
-      background: linear-gradient(135deg, var(--neon), var(--neon2));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
+        /* Header Section */
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeInUp 0.8s ease-out;
+        }
 
-    .brand-sub {
-      font-family: 'DM Mono', monospace;
-      font-size: clamp(10px, 2vw, 13px);
-      font-weight: 300;
-      color: var(--muted);
-      letter-spacing: 5px;
-      text-transform: uppercase;
-      margin-top: 10px;
-    }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            border-radius: 100px;
+            padding: 0.5rem 1.2rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            color: var(--accent-primary);
+            margin-bottom: 2rem;
+            backdrop-filter: blur(10px);
+        }
 
-    .divider {
-      width: 60px;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, var(--neon), transparent);
-      margin: 32px auto;
-      animation: fadeUp 0.6s ease both;
-      animation-delay: 0.3s;
-    }
+        .badge-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--accent-primary);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
 
-    /* ── GRIDS ── */
-    .grid-main {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      width: 100%;
-      animation: fadeUp 0.6s ease both;
-      animation-delay: 0.4s;
-    }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
 
-    .grid-social {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 14px;
-      width: 100%;
-      margin-top: 14px;
-      animation: fadeUp 0.6s ease both;
-      animation-delay: 0.5s;
-    }
+        .logo {
+            margin-bottom: 1rem;
+        }
 
-    /* ── CARDS ── */
-    .card {
-      position: relative;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 22px;
-      padding: 30px 22px 26px;
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 12px;
-      text-decoration: none;
-      color: inherit;
-      overflow: hidden;
-      transition: border-color 0.3s, transform 0.25s, box-shadow 0.3s;
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-    }
+        .logo-icon {
+            font-size: 4rem;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: inline-block;
+            animation: glow 3s ease-in-out infinite;
+        }
 
-    .card-sm {
-      padding: 22px 18px 20px;
-      border-radius: 18px;
-    }
+        @keyframes glow {
+            0%, 100% { filter: drop-shadow(0 0 5px rgba(0, 255, 136, 0.3)); }
+            50% { filter: drop-shadow(0 0 20px rgba(0, 255, 136, 0.6)); }
+        }
 
-    .card::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, rgba(255,255,255,0.04), transparent);
-      border-radius: inherit;
-      pointer-events: none;
-    }
+        h1 {
+            font-size: clamp(2.5rem, 8vw, 4.5rem);
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.7) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
 
-    .card::after {
-      content: '';
-      position: absolute;
-      bottom: 0; left: 0; right: 0;
-      height: 1px;
-      background: var(--card-glow, var(--neon));
-      opacity: 0;
-      transform: scaleX(0);
-      transition: opacity 0.3s, transform 0.4s;
-    }
+        .gradient-text {
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
 
-    .card:hover {
-      border-color: rgba(255,255,255,0.15);
-      transform: translateY(-5px);
-      box-shadow: 0 24px 64px rgba(0,0,0,0.5), 0 0 40px var(--card-shadow, rgba(0,255,136,0.08));
-    }
+        .subtitle {
+            font-size: clamp(0.9rem, 3vw, 1.1rem);
+            color: var(--text-secondary);
+            max-width: 500px;
+            margin: 1rem auto 0;
+            line-height: 1.6;
+        }
 
-    .card:hover::after { opacity: 1; transform: scaleX(1); }
-    .card:active { transform: translateY(-2px) scale(0.98); }
+        /* Stats Section */
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 3rem;
+            flex-wrap: wrap;
+            animation: fadeInUp 0.8s ease-out 0.1s both;
+        }
 
-    .card-icon {
-      width: 46px; height: 46px;
-      border-radius: 14px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 22px;
-      background: var(--card-icon-bg, rgba(0,255,136,0.1));
-      border: 1px solid var(--card-icon-border, rgba(0,255,136,0.2));
-      transition: transform 0.3s;
-      flex-shrink: 0;
-    }
+        .stat-item {
+            text-align: center;
+        }
 
-    .card-sm .card-icon {
-      width: 38px; height: 38px;
-      border-radius: 11px;
-      font-size: 18px;
-    }
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
 
-    .card:hover .card-icon { transform: scale(1.12) rotate(-5deg); }
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
 
-    .card-label {
-      font-size: 16px;
-      font-weight: 700;
-      letter-spacing: 0.4px;
-      color: #fff;
-    }
+        /* Cards Grid */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            animation: fadeInUp 0.8s ease-out 0.2s both;
+        }
 
-    .card-sm .card-label { font-size: 14px; }
+        @media (max-width: 640px) {
+            .cards-grid {
+                grid-template-columns: 1fr;
+            }
+        }
 
-    .card-desc {
-      font-family: 'DM Mono', monospace;
-      font-size: 11px;
-      font-weight: 300;
-      color: var(--muted);
-      letter-spacing: 0.3px;
-      line-height: 1.6;
-    }
+        .card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-light);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            text-decoration: none;
+            display: block;
+        }
 
-    .card-sm .card-desc { font-size: 10px; }
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+            transition: left 0.5s;
+        }
 
-    .card-arrow {
-      position: absolute;
-      top: 20px; right: 20px;
-      font-size: 18px;
-      color: var(--muted);
-      transition: transform 0.3s, color 0.3s;
-    }
+        .card:hover {
+            transform: translateY(-5px);
+            border-color: var(--border-glow);
+            box-shadow: var(--shadow-glow);
+        }
 
-    .card:hover .card-arrow { transform: translate(3px, -3px); color: #fff; }
+        .card:hover::before {
+            left: 100%;
+        }
 
-    .card-qr   { --card-glow: var(--neon);  --card-shadow: rgba(0,255,136,0.1);   --card-icon-bg: rgba(0,255,136,0.1);   --card-icon-border: rgba(0,255,136,0.25); }
-    .card-pair { --card-glow: var(--neon2); --card-shadow: rgba(0,207,255,0.1);   --card-icon-bg: rgba(0,207,255,0.1);   --card-icon-border: rgba(0,207,255,0.25); }
-    .card-gh   { --card-glow: rgba(232,234,240,0.3); --card-shadow: rgba(255,255,255,0.05); --card-icon-bg: rgba(255,255,255,0.06); --card-icon-border: rgba(255,255,255,0.12); }
-    .card-wa   { --card-glow: #25d366;      --card-shadow: rgba(37,211,102,0.1);  --card-icon-bg: rgba(37,211,102,0.1);  --card-icon-border: rgba(37,211,102,0.25); }
-    .card-tg   { --card-glow: var(--tg);    --card-shadow: rgba(44,165,224,0.1);  --card-icon-bg: rgba(44,165,224,0.1);  --card-icon-border: rgba(44,165,224,0.25); }
+        .card-icon {
+            width: 60px;
+            height: 60px;
+            background: rgba(0, 255, 136, 0.1);
+            border-radius: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            transition: transform 0.3s;
+        }
 
-    .footer {
-      margin-top: 44px;
-      font-family: 'DM Mono', monospace;
-      font-size: 11px;
-      font-weight: 300;
-      color: rgba(232,234,240,0.18);
-      letter-spacing: 2px;
-      text-align: center;
-      animation: fadeUp 0.6s ease both;
-      animation-delay: 0.6s;
-    }
+        .card:hover .card-icon {
+            transform: scale(1.05) rotate(-5deg);
+        }
 
-    .footer a { color: rgba(0,255,136,0.45); text-decoration: none; transition: color 0.2s; }
-    .footer a:hover { color: var(--neon); }
+        .card h3 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
 
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(28px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
+        .card p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.5;
+            margin-bottom: 1rem;
+        }
 
-    /* ── MOBILE ── */
-    @media (max-width: 520px) {
-      .grid-main   { grid-template-columns: 1fr; gap: 10px; }
-      .grid-social { grid-template-columns: 1fr; gap: 10px; }
+        .card-feature {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
 
-      .card, .card-sm {
-        flex-direction: row;
-        align-items: center;
-        padding: 18px 52px 18px 16px;
-        gap: 14px;
-        border-radius: 16px;
-      }
+        .card-feature span {
+            color: var(--accent-primary);
+        }
 
-      .card-icon { width: 40px !important; height: 40px !important; font-size: 18px !important; border-radius: 11px !important; }
-      .card-arrow { top: 50%; right: 16px; transform: translateY(-50%); }
-      .card:hover .card-arrow { transform: translateY(-50%) translateX(3px); }
-    }
+        .card-arrow {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            transition: transform 0.3s;
+        }
 
-    /* ── TABLET ── */
-    @media (min-width: 521px) and (max-width: 680px) {
-      .grid-social { grid-template-columns: 1fr 1fr; }
-      .card-tg { grid-column: span 2; }
-    }
-  </style>
+        .card:hover .card-arrow {
+            transform: translate(5px, -5px);
+            color: var(--accent-primary);
+        }
+
+        /* Social Links */
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+            animation: fadeInUp 0.8s ease-out 0.3s both;
+        }
+
+        .social-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1.5rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-light);
+            border-radius: 100px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+        }
+
+        .social-btn:hover {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+            transform: translateY(-2px);
+        }
+
+        .social-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border-light);
+            animation: fadeInUp 0.8s ease-out 0.4s both;
+        }
+
+        .footer-text {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.75rem;
+            transition: color 0.3s;
+        }
+
+        .footer-links a:hover {
+            color: var(--accent-primary);
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Loading Effect */
+        .loading-effect {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-primary);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s;
+        }
+
+        .loader {
+            width: 50px;
+            height: 50px;
+            border: 2px solid var(--border-light);
+            border-top-color: var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .card {
+                padding: 1.5rem;
+            }
+            
+            .social-btn {
+                padding: 0.6rem 1.2rem;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
 </head>
 <body>
 
-  <div class="orb orb-1"></div>
-  <div class="orb orb-2"></div>
-  <div class="orb orb-3"></div>
-  <canvas id="bg-canvas"></canvas>
-
-  <div class="wrapper">
-    <div class="badge">✦ Session Generator</div>
-
-    <div class="brand">
-      <div class="brand-name">MEGA<span class="accent">-MD</span></div>
-      <div class="brand-sub">WhatsApp Bot Platform</div>
+    <div class="loading-effect" id="loading">
+        <div class="loader"></div>
     </div>
 
-    <div class="divider"></div>
+    <div class="bg-animation">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
+    </div>
+    <div class="grid-pattern"></div>
 
-    <div class="grid-main">
-      <a class="card card-qr" onclick="window.open('/qrpage')" href="javascript:void(0)">
-        <div class="card-icon">⬛</div>
-        <div>
-          <div class="card-label">QR Code</div>
-          <div class="card-desc">Scan to link<br>your device</div>
-        </div>
-        <span class="card-arrow">↗</span>
-      </a>
+    <div class="container">
+        <div class="content">
+            <!-- Header -->
+            <div class="header">
+                <div class="badge">
+                    <span class="badge-dot"></span>
+                    <span>ACTIVE SESSION GENERATOR</span>
+                </div>
+                <div class="logo">
+                    <span class="logo-icon">⚡</span>
+                </div>
+                <h1>
+                    GURU <span class="gradient-text">MD</span>
+                </h1>
+                <p class="subtitle">
+                    Advanced WhatsApp Bot Session Manager • Secure • Fast • Reliable
+                </p>
+            </div>
 
-      <a class="card card-pair" onclick="window.open('/pair')" href="javascript:void(0)">
-        <div class="card-icon">🔑</div>
-        <div>
-          <div class="card-label">Pair Code</div>
-          <div class="card-desc">Link via<br>phone number</div>
+            <!-- Stats -->
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-number">500+</div>
+                    <div class="stat-label">Active Sessions</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">99.9%</div>
+                    <div class="stat-label">Uptime</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">24/7</div>
+                    <div class="stat-label">Support</div>
+                </div>
+            </div>
+
+            <!-- Main Cards -->
+            <div class="cards-grid">
+                <a class="card" href="/qrpage">
+                    <div class="card-icon">📱</div>
+                    <h3>QR Code</h3>
+                    <p>Scan the QR code with your WhatsApp to link your device instantly</p>
+                    <div class="card-feature">
+                        <span>✓</span> Instant connection
+                    </div>
+                    <div class="card-arrow">→</div>
+                </a>
+
+                <a class="card" href="/pair">
+                    <div class="card-icon">🔐</div>
+                    <h3>Pair Code</h3>
+                    <p>Enter your phone number and receive a pairing code via WhatsApp</p>
+                    <div class="card-feature">
+                        <span>✓</span> No QR scanner needed
+                    </div>
+                    <div class="card-arrow">→</div>
+                </a>
+            </div>
+
+            <!-- Social Links -->
+            <div class="social-links">
+                <a href="https://github.com/itsguruu/GURUPAIR" target="_blank" class="social-btn">
+                    <svg fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.108-.775.418-1.305.762-1.604-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.195.69.795.57 4.765-1.587 8.2-6.085 8.2-11.386 0-6.627-5.373-12-12-12z"/>
+                    </svg>
+                    <span>GitHub</span>
+                </a>
+                <a href="https://t.me/itsguruu" target="_blank" class="social-btn">
+                    <svg fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.08-.2-.09-.06-.22-.04-.31-.02-.13.02-2.18 1.38-6.15 4.06-.58.4-1.11.59-1.58.58-.52-.01-1.52-.29-2.26-.53-.91-.29-1.63-.45-1.57-.95.03-.26.39-.53 1.07-.8 4.16-1.81 6.93-3 8.31-3.58 3.96-1.67 4.78-1.96 5.31-1.97.12 0 .39.03.57.18.15.13.19.3.21.45.02.1.01.3-.01.44z"/>
+                    </svg>
+                    <span>Telegram</span>
+                </a>
+                <a href="https://whatsapp.com/channel/0029VagJIAr3bbVBCpEkAM07" target="_blank" class="social-btn">
+                    <svg fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/>
+                    </svg>
+                    <span>WhatsApp Channel</span>
+                </a>
+            </div>
+
+            <!-- Footer -->
+            <div class="footer">
+                <div class="footer-text">
+                    © 2024 GURU MD • Premium WhatsApp Bot Framework
+                </div>
+                <div class="footer-links">
+                    <a href="https://github.com/itsguruu/GURUPAIR">Documentation</a>
+                    <a href="https://github.com/itsguruu/GURUPAIR/issues">Support</a>
+                    <a href="https://github.com/itsguruu/GURUPAIR">Privacy Policy</a>
+                    <a href="https://github.com/itsguruu/GURUPAIR">Terms of Service</a>
+                </div>
+            </div>
         </div>
-        <span class="card-arrow">↗</span>
-      </a>
     </div>
 
-    <div class="grid-social">
-      <a class="card card-sm card-gh" onclick="window.open('https://github.com/GlobalTechInfo/WEB-PAIR-QR')" href="javascript:void(0)">
-        <div class="card-icon">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" style="color:rgba(232,234,240,0.85)">
-            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
-          </svg>
-        </div>
-        <div>
-          <div class="card-label">GitHub</div>
-          <div class="card-desc">Source &amp; releases</div>
-        </div>
-        <span class="card-arrow">↗</span>
-      </a>
-
-      <a class="card card-sm card-wa" onclick="window.open('https://whatsapp.com/channel/0029VagJIAr3bbVBCpEkAM07')" href="javascript:void(0)">
-        <div class="card-icon">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" style="color:#25d366">
-            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/>
-          </svg>
-        </div>
-        <div>
-          <div class="card-label">WhatsApp</div>
-          <div class="card-desc">Join channel</div>
-        </div>
-        <span class="card-arrow">↗</span>
-      </a>
-
-      <a class="card card-sm card-tg" onclick="window.open('https://t.me/Global_TechInfo')" href="javascript:void(0)">
-        <div class="card-icon">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" style="color:#2CA5E0">
-            <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
-          </svg>
-        </div>
-        <div>
-          <div class="card-label">Telegram</div>
-          <div class="card-desc">Support group</div>
-        </div>
-        <span class="card-arrow">↗</span>
-      </a>
-    </div>
-
-    <div class="footer">
-      Built by <a href="https://github.com/GlobalTechInfo/MEGA-MD" target="_blank">GlobalTechInfo</a> &nbsp;•&nbsp; MEGA-MD v5
-    </div>
-  </div>
-
-  <script>
-    const canvas = document.getElementById('bg-canvas');
-    const ctx = canvas.getContext('2d');
-    let W, H, nodes = [], animId;
-
-    function resize() {
-      W = canvas.width = window.innerWidth;
-      H = canvas.height = window.innerHeight;
-    }
-
-    function initNodes() {
-      nodes = [];
-      const count = Math.min(Math.floor((W * H) / 16000), 65);
-      for (let i = 0; i < count; i++) {
-        nodes.push({
-          x: Math.random() * W,
-          y: Math.random() * H,
-          vx: (Math.random() - 0.5) * 0.25,
-          vy: (Math.random() - 0.5) * 0.25,
-          r: Math.random() * 1.5 + 0.5,
-          opacity: Math.random() * 0.4 + 0.1
+    <script>
+        // Remove loading screen
+        window.addEventListener('load', () => {
+            const loading = document.getElementById('loading');
+            setTimeout(() => {
+                loading.style.opacity = '0';
+                setTimeout(() => {
+                    loading.style.display = 'none';
+                }, 500);
+            }, 500);
         });
-      }
-    }
 
-    function draw() {
-      ctx.clearRect(0, 0, W, H);
-      for (let i = 0; i < nodes.length; i++) {
-        const a = nodes[i];
-        a.x += a.vx; a.y += a.vy;
-        if (a.x < 0 || a.x > W) a.vx *= -1;
-        if (a.y < 0 || a.y > H) a.vy *= -1;
-        for (let j = i + 1; j < nodes.length; j++) {
-          const b = nodes[j];
-          const dx = a.x - b.x, dy = a.y - b.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 140) {
-            ctx.beginPath();
-            ctx.strokeStyle = `rgba(0,255,136,${(1 - dist / 140) * 0.11})`;
-            ctx.lineWidth = 0.5;
-            ctx.moveTo(a.x, a.y);
-            ctx.lineTo(b.x, b.y);
-            ctx.stroke();
-          }
-        }
-        ctx.beginPath();
-        ctx.arc(a.x, a.y, a.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(0,255,136,${a.opacity})`;
-        ctx.fill();
-      }
-      animId = requestAnimationFrame(draw);
-    }
+        // Add smooth page transitions
+        document.querySelectorAll('.card, .social-btn').forEach(link => {
+            link.addEventListener('click', function(e) {
+                if (this.href && this.href !== '#') {
+                    e.preventDefault();
+                    const target = this.href;
+                    document.body.style.opacity = '0';
+                    setTimeout(() => {
+                        window.location.href = target;
+                    }, 300);
+                }
+            });
+        });
 
-    window.addEventListener('resize', () => {
-      cancelAnimationFrame(animId);
-      resize(); initNodes(); draw();
-    });
-
-    resize(); initNodes(); draw();
-  </script>
+        // Dynamic gradient mouse move effect
+        document.addEventListener('mousemove', (e) => {
+            const orbs = document.querySelectorAll('.gradient-orb');
+            const x = e.clientX / window.innerWidth;
+            const y = e.clientY / window.innerHeight;
+            
+            orbs.forEach((orb, index) => {
+                const speed = (index + 1) * 20;
+                const moveX = (x - 0.5) * speed;
+                const moveY = (y - 0.5) * speed;
+                orb.style.transform = `translate(${moveX}px, ${moveY}px)`;
+            });
+        });
+    </script>
 </body>
 </html>

@@ -1,32 +1,40 @@
 {
-  "name": "pairing-web",
+  "name": "guru-pairing-vercel",
   "version": "2.0.0",
   "type": "module",
-  "description": "WhatsApp bot pairing system with Base64 session ID generation",
+  "description": "GURU MD WhatsApp Pairing System - Vercel Compatible",
   "main": "index.js",
   "engines": {
     "node": ">=20.0.0"
   },
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "vercel-build": "npm install"
   },
-  "keywords": ["baileys", "whatsapp-bot", "pairing", "base64-session", "guru-md"],
+  "keywords": [
+    "baileys", "whatsapp-bot", "pairing", "base64-session", "guru-md", "vercel"
+  ],
   "author": "itsguruu",
   "license": "MIT",
   "dependencies": {
     "@hapi/boom": "^10.0.1",
+    "@upstash/redis": "^1.28.0",
+    "@vercel/node": "^3.0.0",
     "@whiskeysockets/baileys": "^7.0.0-rc.9",
     "awesome-phonenumber": "7.2.0",
+    "body-parser": "^1.20.3",
     "dotenv": "^16.4.7",
+    "express": "^4.21.2",
     "fs-extra": "^11.3.0",
     "node-fetch": "^3.3.2",
+    "path": "^0.12.7",
     "pino": "^9.5.0",
     "phone": "3.1.55",
-    "body-parser": "^1.20.3",
-    "path": "^0.12.7",
-    "express": "^4.21.2",
     "qrcode": "^1.5.4",
     "qrcode-terminal": "^0.12.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0"
   }
 }

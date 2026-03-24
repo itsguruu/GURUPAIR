@@ -12,7 +12,6 @@ import {
     fetchLatestBaileysVersion,
     DisconnectReason
 } from '@whiskeysockets/baileys';
-// Remove: import uploadToPastebin from './Paste.js';
 
 const router = express.Router();
 const MAX_RECONNECT_ATTEMPTS = 3;
@@ -35,7 +34,7 @@ https://youtube.com/@itsguruu
 *GURU MD - WHATSAPP BOT* 🥀
 `;
 
-// NEW FUNCTION: Generate Base64 Session ID
+// FUNCTION: Generate Base64 Session ID
 function generateBase64Session(credsData, botName = 'GURU') {
     try {
         // Convert credentials to Base64
@@ -45,46 +44,6 @@ function generateBase64Session(credsData, botName = 'GURU') {
         return sessionId;
     } catch (error) {
         console.error('Error generating Base64 session:', error);
-        throw error;
-    }
-}
-
-// NEW FUNCTION: Save credentials from Base64 session (for future use)
-export function decodeBase64Session(sessionId) {
-    try {
-        // Check if session ID starts with GURU~
-        if (!sessionId.startsWith('GURU~')) {
-            throw new Error('Invalid session format - must start with GURU~');
-        }
-        
-        // Extract Base64 part after the prefix
-        const base64Data = sessionId.substring(5); // Remove "GURU~"
-        
-        // Decode Base64 to JSON
-        const jsonString = Buffer.from(base64Data, 'base64').toString('utf-8');
-        const credsData = JSON.parse(jsonString);
-        
-        return credsData;
-    } catch (error) {
-        console.error('Error decoding Base64 session:', error);
-        return null;
-    }
-}
-
-// NEW FUNCTION: Save credentials to file from Base64 session
-export async function saveCredsFromBase64(sessionId, dirs) {
-    try {
-        const credsData = decodeBase64Session(sessionId);
-        if (!credsData) {
-            throw new Error('Failed to decode session ID');
-        }
-        
-        const credsPath = `${dirs}/creds.json`;
-        await fs.writeJson(credsPath, credsData, { spaces: 2 });
-        console.log('✅ Credentials saved from Base64 session');
-        return credsData;
-    } catch (error) {
-        console.error('Error saving credentials from Base64:', error);
         throw error;
     }
 }
@@ -104,14 +63,14 @@ router.get('/', async (req, res) => {
     let num = req.query.number;
 
     if (!num) {
-        return res.status(400).send({ code: 'Phone number is required' });
+        return res.status(400).send({ error: 'Phone number is required' });
     }
 
     num = num.replace(/[^0-9]/g, '');
     const phone = pn('+' + num);
 
     if (!phone.isValid()) {
-        return res.status(400).send({ code: 'Invalid phone number. Use full international format without + or spaces.' });
+        return res.status(400).send({ error: 'Invalid phone number. Use full international format without + or spaces.' });
     }
 
     num = phone.getNumber('e164').replace('+', '');
@@ -126,7 +85,6 @@ router.get('/', async (req, res) => {
     let reconnectAttempts = 0;
     let currentSocket = null;
     let timeoutHandle = null;
-    let generatedSessionId = null;
 
     async function cleanup(reason = 'unknown') {
         if (isCleaningUp) return;
@@ -164,7 +122,7 @@ router.get('/', async (req, res) => {
             console.log(`❌ Max reconnection attempts reached for ${num}`);
             if (!responseSent && !res.headersSent) {
                 responseSent = true;
-                res.status(503).send({ code: 'Connection failed after multiple attempts' });
+                res.status(503).send({ error: 'Connection failed after multiple attempts' });
             }
             await cleanup('max_reconnects');
             return;
@@ -219,14 +177,14 @@ router.get('/', async (req, res) => {
 
                     try {
                         const credsFile = `${dirs}/creds.json`;
-                        if (fs.existsSync(credsFile)) {
+                        if (await fs.pathExists(credsFile)) {
                             console.log(`📄 Reading creds.json for ${num}...`);
                             
                             // Read the credentials file
                             const credsData = await fs.readJson(credsFile);
                             
                             // Generate Base64 session ID
-                            generatedSessionId = generateBase64Session(credsData, 'GURU');
+                            const generatedSessionId = generateBase64Session(credsData, 'GURU');
                             console.log('✅ Base64 Session ID generated successfully!');
                             console.log('📱 Session ID (starts with GURU~):', generatedSessionId.substring(0, 50) + '...');
                             
@@ -234,8 +192,7 @@ router.get('/', async (req, res) => {
                             const userJid = jidNormalizedUser(num + '@s.whatsapp.net');
                             
                             // Format the message with the session ID
-                            const sessionMessage = `
-*✨ GURU MD SESSION GENERATED ✨*
+                            const sessionMessage = `*✨ GURU MD SESSION GENERATED ✨*
 
 *Your Session ID:* 
 \`${generatedSessionId}\`
@@ -248,19 +205,14 @@ router.get('/', async (req, res) => {
 *📝 Example:*
 SESSION_ID=${generatedSessionId}
 
-${MESSAGE}
-`;
+${MESSAGE}`;
                             
-                            const msg = await sock.sendMessage(userJid, { text: sessionMessage });
-                            
-                            // Also send a smaller version as a quoted message
-                            await sock.sendMessage(userJid, { 
-                                text: `🔑 *Session ID:* \`${generatedSessionId}\``,
-                                quoted: msg 
-                            });
+                            await sock.sendMessage(userJid, { text: sessionMessage });
                             
                             console.log(`✅ Session ID sent to ${num}`);
                             await delay(1000);
+                        } else {
+                            console.error(`❌ creds.json not found at ${credsFile}`);
                         }
                     } catch (err) {
                         console.error('Error generating/sending Base64 session:', err);
@@ -289,7 +241,7 @@ ${MESSAGE}
                         console.log(`❌ Logged out or invalid pairing for ${num}`);
                         if (!responseSent && !res.headersSent) {
                             responseSent = true;
-                            res.status(401).send({ code: 'Invalid pairing code or session expired' });
+                            res.status(401).send({ error: 'Invalid pairing code or session expired' });
                         }
                         await cleanup('logged_out');
                     } else if (pairingCodeSent && !sessionCompleted) {
@@ -320,7 +272,7 @@ ${MESSAGE}
                     pairingCodeSent = false;
                     if (!responseSent && !res.headersSent) {
                         responseSent = true;
-                        res.status(503).send({ code: 'Failed to get pairing code' });
+                        res.status(503).send({ error: 'Failed to get pairing code' });
                     }
                     await cleanup('pairing_code_error');
                 }
@@ -333,7 +285,7 @@ ${MESSAGE}
                     console.log(`⏰ Pairing timeout for ${num}`);
                     if (!responseSent && !res.headersSent) {
                         responseSent = true;
-                        res.status(408).send({ code: 'Pairing timeout' });
+                        res.status(408).send({ error: 'Pairing timeout' });
                     }
                     await cleanup('timeout');
                 }
@@ -343,7 +295,7 @@ ${MESSAGE}
             console.error(`❌ Error initializing session for ${num}:`, err);
             if (!responseSent && !res.headersSent) {
                 responseSent = true;
-                res.status(503).send({ code: 'Service Unavailable' });
+                res.status(503).send({ error: 'Service Unavailable' });
             }
             await cleanup('init_error');
         }
@@ -355,7 +307,7 @@ ${MESSAGE}
 setInterval(async () => {
     try {
         const baseDir = './auth_info_baileys';
-        if (!fs.existsSync(baseDir)) return;
+        if (!await fs.pathExists(baseDir)) return;
 
         const sessions = await fs.readdir(baseDir);
         const now = Date.now();

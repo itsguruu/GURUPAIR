@@ -1,8 +1,8 @@
 {
-  "name": "guru-pairing-vercel",
+  "name": "guru-pairing",
   "version": "2.0.0",
   "type": "module",
-  "description": "GURU MD WhatsApp Pairing System - Vercel Compatible",
+  "description": "GURU MD WhatsApp Bot Pairing System with Base64 Session ID",
   "main": "index.js",
   "engines": {
     "node": ">=20.0.0"
@@ -13,14 +13,12 @@
     "vercel-build": "npm install"
   },
   "keywords": [
-    "baileys", "whatsapp-bot", "pairing", "base64-session", "guru-md", "vercel"
+    "baileys", "whatsapp-bot", "pairing", "base64-session", "guru-md"
   ],
   "author": "itsguruu",
   "license": "MIT",
   "dependencies": {
     "@hapi/boom": "^10.0.1",
-    "@upstash/redis": "^1.28.0",
-    "@vercel/node": "^3.0.0",
     "@whiskeysockets/baileys": "^7.0.0-rc.9",
     "awesome-phonenumber": "7.2.0",
     "body-parser": "^1.20.3",

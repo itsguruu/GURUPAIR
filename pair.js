@@ -18,6 +18,13 @@ const MAX_RECONNECT_ATTEMPTS = 3;
 const SESSION_TIMEOUT = 5 * 60 * 1000;
 const CLEANUP_DELAY = 5000;
 
+// Use /tmp for Vercel compatibility
+const getAuthPath = (sessionId) => {
+    // Vercel uses /tmp directory for temporary storage
+    const basePath = process.env.VERCEL ? '/tmp/auth_info_baileys' : './auth_info_baileys';
+    return `${basePath}/session_${sessionId}`;
+};
+
 const MESSAGE = `
 *SESSION GENERATED SUCCESSFULLY* ✅
 
@@ -26,7 +33,6 @@ https://github.com/itsguruu/GURUPAIR
 
 *Sᴜᴘᴘᴏʀᴛ Gʀᴏᴜᴘ ꜰᴏʀ ϙᴜᴇʀʏ* 💭
 https://t.me/itsguruu
-https://whatsapp.com/channel/your-channel-link
 
 *Yᴏᴜ-ᴛᴜʙᴇ ᴛᴜᴛᴏʀɪᴀʟꜱ* 🪄 
 https://youtube.com/@itsguruu
@@ -34,12 +40,10 @@ https://youtube.com/@itsguruu
 *GURU MD - WHATSAPP BOT* 🥀
 `;
 
-// FUNCTION: Generate Base64 Session ID
+// Generate Base64 Session ID
 function generateBase64Session(credsData, botName = 'GURU') {
     try {
-        // Convert credentials to Base64
         const base64String = Buffer.from(JSON.stringify(credsData)).toString('base64');
-        // Format: GURU~[base64 string]
         const sessionId = `${botName}~${base64String}`;
         return sessionId;
     } catch (error) {
@@ -59,24 +63,33 @@ async function removeFile(FilePath) {
     }
 }
 
-router.get('/', async (req, res) => {
-    let num = req.query.number;
+// Vercel-compatible handler
+export default async function handler(req, res) {
+    // Set CORS headers for Vercel
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
+    
+    let num = req.query.number || req.body?.number;
 
     if (!num) {
-        return res.status(400).send({ error: 'Phone number is required' });
+        return res.status(400).json({ error: 'Phone number is required' });
     }
 
     num = num.replace(/[^0-9]/g, '');
     const phone = pn('+' + num);
 
     if (!phone.isValid()) {
-        return res.status(400).send({ error: 'Invalid phone number. Use full international format without + or spaces.' });
+        return res.status(400).json({ error: 'Invalid phone number. Use full international format without + or spaces.' });
     }
 
     num = phone.getNumber('e164').replace('+', '');
 
     const sessionId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
-    const dirs = `./auth_info_baileys/session_${sessionId}`;
+    const dirs = getAuthPath(sessionId);
 
     let pairingCodeSent = false;
     let sessionCompleted = false;
@@ -122,16 +135,14 @@ router.get('/', async (req, res) => {
             console.log(`❌ Max reconnection attempts reached for ${num}`);
             if (!responseSent && !res.headersSent) {
                 responseSent = true;
-                res.status(503).send({ error: 'Connection failed after multiple attempts' });
+                res.status(503).json({ error: 'Connection failed after multiple attempts' });
             }
             await cleanup('max_reconnects');
             return;
         }
 
         try {
-            if (!fs.existsSync(dirs)) {
-                await fs.mkdir(dirs, { recursive: true });
-            }
+            await fs.ensureDir(dirs);
 
             const { state, saveCreds } = await useMultiFileAuthState(dirs);
             const { version } = await fetchLatestBaileysVersion();
@@ -180,18 +191,15 @@ router.get('/', async (req, res) => {
                         if (await fs.pathExists(credsFile)) {
                             console.log(`📄 Reading creds.json for ${num}...`);
                             
-                            // Read the credentials file
                             const credsData = await fs.readJson(credsFile);
-                            
-                            // Generate Base64 session ID
                             const generatedSessionId = generateBase64Session(credsData, 'GURU');
+                            
                             console.log('✅ Base64 Session ID generated successfully!');
                             console.log('📱 Session ID (starts with GURU~):', generatedSessionId.substring(0, 50) + '...');
                             
-                            // Send the session ID to the user's WhatsApp
+                            // Send via WhatsApp
                             const userJid = jidNormalizedUser(num + '@s.whatsapp.net');
                             
-                            // Format the message with the session ID
                             const sessionMessage = `*✨ GURU MD SESSION GENERATED ✨*
 
 *Your Session ID:* 
@@ -208,14 +216,26 @@ SESSION_ID=${generatedSessionId}
 ${MESSAGE}`;
                             
                             await sock.sendMessage(userJid, { text: sessionMessage });
-                            
                             console.log(`✅ Session ID sent to ${num}`);
+                            
+                            // Send success response to API
+                            if (!responseSent && !res.headersSent) {
+                                responseSent = true;
+                                res.json({ 
+                                    success: true, 
+                                    sessionId: generatedSessionId,
+                                    message: 'Session ID sent to your WhatsApp'
+                                });
+                            }
+                            
                             await delay(1000);
-                        } else {
-                            console.error(`❌ creds.json not found at ${credsFile}`);
                         }
                     } catch (err) {
                         console.error('Error generating/sending Base64 session:', err);
+                        if (!responseSent && !res.headersSent) {
+                            responseSent = true;
+                            res.status(500).json({ error: 'Failed to generate session' });
+                        }
                     } finally {
                         await cleanup('session_complete');
                     }
@@ -233,15 +253,12 @@ ${MESSAGE}`;
                     }
 
                     const statusCode = lastDisconnect?.error?.output?.statusCode;
-                    const reason = lastDisconnect?.error?.output?.payload?.error;
-
-                    console.log(`❌ Connection closed - Status: ${statusCode}, Reason: ${reason}`);
-
+                    
                     if (statusCode === DisconnectReason.loggedOut || statusCode === 401) {
                         console.log(`❌ Logged out or invalid pairing for ${num}`);
                         if (!responseSent && !res.headersSent) {
                             responseSent = true;
-                            res.status(401).send({ error: 'Invalid pairing code or session expired' });
+                            res.status(401).json({ error: 'Invalid pairing code or session expired' });
                         }
                         await cleanup('logged_out');
                     } else if (pairingCodeSent && !sessionCompleted) {
@@ -264,7 +281,7 @@ ${MESSAGE}`;
 
                     if (!responseSent && !res.headersSent) {
                         responseSent = true;
-                        res.send({ code });
+                        res.json({ code });
                         console.log(`📱 Pairing code sent for ${num}: ${code}`);
                     }
                 } catch (error) {
@@ -272,7 +289,7 @@ ${MESSAGE}`;
                     pairingCodeSent = false;
                     if (!responseSent && !res.headersSent) {
                         responseSent = true;
-                        res.status(503).send({ error: 'Failed to get pairing code' });
+                        res.status(503).json({ error: 'Failed to get pairing code' });
                     }
                     await cleanup('pairing_code_error');
                 }
@@ -285,7 +302,7 @@ ${MESSAGE}`;
                     console.log(`⏰ Pairing timeout for ${num}`);
                     if (!responseSent && !res.headersSent) {
                         responseSent = true;
-                        res.status(408).send({ error: 'Pairing timeout' });
+                        res.status(408).json({ error: 'Pairing timeout' });
                     }
                     await cleanup('timeout');
                 }
@@ -295,61 +312,11 @@ ${MESSAGE}`;
             console.error(`❌ Error initializing session for ${num}:`, err);
             if (!responseSent && !res.headersSent) {
                 responseSent = true;
-                res.status(503).send({ error: 'Service Unavailable' });
+                res.status(503).json({ error: 'Service Unavailable' });
             }
             await cleanup('init_error');
         }
     }
 
     await initiateSession();
-});
-
-setInterval(async () => {
-    try {
-        const baseDir = './auth_info_baileys';
-        if (!await fs.pathExists(baseDir)) return;
-
-        const sessions = await fs.readdir(baseDir);
-        const now = Date.now();
-
-        for (const session of sessions) {
-            const sessionPath = `${baseDir}/${session}`;
-            try {
-                const stats = await fs.stat(sessionPath);
-                if (now - stats.mtimeMs > 10 * 60 * 1000) {
-                    console.log(`🗑️ Removing old session: ${session}`);
-                    await fs.remove(sessionPath);
-                }
-            } catch (e) {}
-        }
-    } catch (e) {
-        console.error('Error in cleanup interval:', e);
-    }
-}, 60000);
-
-process.on('SIGTERM', async () => {
-    console.log('🛑 SIGTERM received, cleaning up...');
-    try { await fs.remove('./auth_info_baileys'); } catch (e) {}
-    process.exit(0);
-});
-
-process.on('SIGINT', async () => {
-    console.log('🛑 SIGINT received, cleaning up...');
-    try { await fs.remove('./auth_info_baileys'); } catch (e) {}
-    process.exit(0);
-});
-
-process.on('uncaughtException', (err) => {
-    const e = String(err);
-    const ignore = [
-        "conflict", "not-authorized", "Socket connection timeout",
-        "rate-overlimit", "Connection Closed", "Timed Out",
-        "Value not found", "Stream Errored", "Stream Errored (restart required)",
-        "statusCode: 515", "statusCode: 503"
-    ];
-    if (!ignore.some(x => e.includes(x))) {
-        console.log('Caught exception:', err);
-    }
-});
-
-export default router;
+}

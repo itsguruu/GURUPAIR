@@ -8,10 +8,6 @@
     {
       "src": "pair.js",
       "use": "@vercel/node"
-    },
-    {
-      "src": "qr.js",
-      "use": "@vercel/node"
     }
   ],
   "routes": [
@@ -26,14 +22,6 @@
     {
       "src": "/code",
       "dest": "/pair.js"
-    },
-    {
-      "src": "/qr",
-      "dest": "/qr.js"
-    },
-    {
-      "src": "/qrpage",
-      "dest": "/qr.js"
     },
     {
       "src": "/health",

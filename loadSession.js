@@ -15,7 +15,7 @@ export function generateBase64Session(credsData, botName = 'GURU') {
 // Decode Base64 session to credentials
 export function decodeBase64Session(sessionId) {
     try {
-        if (!sessionId.startsWith('GURU~')) {
+        if (!sessionId || !sessionId.startsWith('GURU~')) {
             throw new Error('Invalid session format - must start with GURU~');
         }
         
@@ -47,17 +47,6 @@ export async function loadSessionFromBase64(sessionId, sessionPath) {
     } catch (error) {
         console.error('Error loading session from Base64:', error);
         return false;
-    }
-}
-
-// Save credentials to Base64 session
-export async function saveCredsToBase64(credsPath, botName = 'GURU') {
-    try {
-        const credsData = await fs.readJson(credsPath);
-        return generateBase64Session(credsData, botName);
-    } catch (error) {
-        console.error('Error saving credentials to Base64:', error);
-        throw error;
     }
 }
 

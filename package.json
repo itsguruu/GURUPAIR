@@ -2,21 +2,15 @@
   "name": "guru-pairing",
   "version": "2.0.0",
   "type": "module",
-  "description": "GURU MD WhatsApp Bot Pairing System with Base64 Session ID",
+  "description": "GURU MD WhatsApp Bot Pairing System",
   "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "vercel-build": "npm install"
+  },
   "engines": {
     "node": ">=20.0.0"
   },
-  "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
-    "vercel-build": "npm install"
-  },
-  "keywords": [
-    "baileys", "whatsapp-bot", "pairing", "base64-session", "guru-md"
-  ],
-  "author": "itsguruu",
-  "license": "MIT",
   "dependencies": {
     "@hapi/boom": "^10.0.1",
     "@whiskeysockets/baileys": "^7.0.0-rc.9",
@@ -31,8 +25,5 @@
     "phone": "3.1.55",
     "qrcode": "^1.5.4",
     "qrcode-terminal": "^0.12.0"
-  },
-  "devDependencies": {
-    "nodemon": "^3.0.0"
   }
 }

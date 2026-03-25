@@ -4,16 +4,8 @@ import bodyParser from 'body-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// Only import pair router, QR is optional
+// Only import pair router
 import pairRouter from './pair.js';
-
-// Try to import QR, but handle if it doesn't exist
-let qrRouter = null;
-try {
-    qrRouter = (await import('./qr.js')).default;
-} catch (e) {
-    console.log('QR module not found, QR routes disabled');
-}
 
 const app = express();
 
@@ -30,91 +22,26 @@ app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
 // Serve static files
-const staticPath = path.join(__dirname, 'public');
-const hasPublicFolder = require('fs').existsSync(staticPath);
-app.use(express.static(hasPublicFolder ? staticPath : __dirname));
+app.use(express.static(__dirname));
 
-// Routes - QR only if available
-if (qrRouter) {
-    app.use('/qr', qrRouter);
-}
+// Only use pair routes
 app.use('/code', pairRouter);
+app.use('/pair', pairRouter);
 
-// HTML Pages
-app.use('/pair', async (req, res) => {
-    const pairHtmlPath = path.join(__dirname, 'pair.html');
-    const publicPairPath = path.join(__dirname, 'public', 'pair.html');
-    
-    if (require('fs').existsSync(pairHtmlPath)) {
-        res.sendFile(pairHtmlPath);
-    } else if (require('fs').existsSync(publicPairPath)) {
-        res.sendFile(publicPairPath);
-    } else {
-        res.send(`
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>GURU MD - Pairing</title>
-                <style>
-                    body {
-                        font-family: monospace;
-                        background: #0a0c0f;
-                        color: #00ff88;
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        min-height: 100vh;
-                        margin: 0;
-                    }
-                    .container {
-                        text-align: center;
-                        padding: 20px;
-                    }
-                    input, button {
-                        padding: 10px;
-                        margin: 10px;
-                        font-size: 16px;
-                    }
-                    button {
-                        background: #00ff88;
-                        border: none;
-                        cursor: pointer;
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <h1>⚡ GURU MD Pairing</h1>
-                    <input type="text" id="number" placeholder="Enter phone number">
-                    <button onclick="pair()">Get Pairing Code</button>
-                    <div id="result"></div>
-                </div>
-                <script>
-                    async function pair() {
-                        const number = document.getElementById('number').value;
-                        const res = await fetch(\`/code?number=\${number}\`);
-                        const data = await res.json();
-                        document.getElementById('result').innerHTML = \`Code: \${data.code}\`;
-                    }
-                </script>
-            </body>
-            </html>
-        `);
-    }
-});
-
-app.use('/qrpage', (req, res) => {
+// HTML Pages - redirect QR to pair
+app.get('/qr', (req, res) => {
     res.redirect('/pair');
 });
 
-app.use('/', async (req, res) => {
+app.get('/qrpage', (req, res) => {
+    res.redirect('/pair');
+});
+
+// Main page
+app.get('/', async (req, res) => {
     const mainHtmlPath = path.join(__dirname, 'main.html');
-    const publicMainPath = path.join(__dirname, 'public', 'main.html');
-    
     if (require('fs').existsSync(mainHtmlPath)) {
         res.sendFile(mainHtmlPath);
-    } else if (require('fs').existsSync(publicMainPath)) {
-        res.sendFile(publicMainPath);
     } else {
         res.send(`
             <!DOCTYPE html>
@@ -132,18 +59,51 @@ app.use('/', async (req, res) => {
                         min-height: 100vh;
                         margin: 0;
                     }
-                    .container { text-align: center; }
-                    a { color: #00ff88; text-decoration: none; margin: 10px; display: inline-block; }
+                    .container { text-align: center; padding: 20px; }
+                    a { color: #00ff88; text-decoration: none; }
+                    input, button {
+                        padding: 10px;
+                        margin: 10px;
+                        font-size: 16px;
+                        background: #1a1e24;
+                        border: 1px solid #00ff88;
+                        color: #00ff88;
+                        border-radius: 5px;
+                    }
+                    button { cursor: pointer; background: #00ff88; color: #000; font-weight: bold; }
                 </style>
             </head>
             <body>
                 <div class="container">
                     <h1>⚡ GURU MD</h1>
                     <p>WhatsApp Bot Session Manager</p>
-                    <a href="/pair">Get Pairing Code</a>
+                    <input type="text" id="number" placeholder="Enter phone number (e.g., 1234567890)">
+                    <button onclick="pair()">Get Pairing Code</button>
+                    <div id="result" style="margin-top: 20px;"></div>
                     <br>
-                    <small>Use: /pair?number=1234567890</small>
+                    <small>Session will be sent to your WhatsApp as Base64 ID starting with GURU~</small>
                 </div>
+                <script>
+                    async function pair() {
+                        const number = document.getElementById('number').value;
+                        if (!number) {
+                            alert('Please enter phone number');
+                            return;
+                        }
+                        document.getElementById('result').innerHTML = '<div class="loading">⏳ Requesting pairing code...</div>';
+                        try {
+                            const res = await fetch(\`/code?number=\${number}\`);
+                            const data = await res.json();
+                            if (data.code) {
+                                document.getElementById('result').innerHTML = \`✅ Pairing code: <strong>\${data.code}</strong><br>Check your WhatsApp for session ID\`;
+                            } else if (data.error) {
+                                document.getElementById('result').innerHTML = \`❌ Error: \${data.error}\`;
+                            }
+                        } catch (e) {
+                            document.getElementById('result').innerHTML = '❌ Connection error';
+                        }
+                    }
+                </script>
             </body>
             </html>
         `);
@@ -158,7 +118,7 @@ app.get('/health', (req, res) => {
         sessionType: 'Base64',
         botName: 'GURU MD',
         platform: process.env.VERCEL ? 'Vercel' : 'Local',
-        qrEnabled: !!qrRouter
+        note: 'QR disabled - use pairing code'
     });
 });
 
@@ -174,7 +134,7 @@ if (process.env.VERCEL) {
 ╚═══════════════════════════════════════════════════╝
         `);
         console.log(`📱 Pairing Server Running on: http://localhost:${PORT}`);
-        console.log(`🔗 Pairing Code Method: http://localhost:${PORT}/pair?number=1234567890`);
+        console.log(`🔗 Pairing Code Method: http://localhost:${PORT}/code?number=1234567890`);
         console.log(`✅ Health Check: http://localhost:${PORT}/health`);
     });
 }

@@ -1,16 +1,25 @@
 import fs from 'fs-extra';
 
+// Generate Base64 session from credentials
+export function generateBase64Session(credsData, botName = 'GURU') {
+    try {
+        const base64String = Buffer.from(JSON.stringify(credsData)).toString('base64');
+        const sessionId = `${botName}~${base64String}`;
+        return sessionId;
+    } catch (error) {
+        console.error('Error generating Base64 session:', error);
+        throw error;
+    }
+}
+
+// Decode Base64 session to credentials
 export function decodeBase64Session(sessionId) {
     try {
-        // Check if session ID starts with GURU~
         if (!sessionId.startsWith('GURU~')) {
             throw new Error('Invalid session format - must start with GURU~');
         }
         
-        // Extract Base64 part after the prefix
-        const base64Data = sessionId.substring(5); // Remove "GURU~"
-        
-        // Decode Base64 to JSON
+        const base64Data = sessionId.substring(5);
         const jsonString = Buffer.from(base64Data, 'base64').toString('utf-8');
         const credsData = JSON.parse(jsonString);
         
@@ -21,6 +30,7 @@ export function decodeBase64Session(sessionId) {
     }
 }
 
+// Load session from Base64 ID to file
 export async function loadSessionFromBase64(sessionId, sessionPath) {
     try {
         const credsData = decodeBase64Session(sessionId);
@@ -28,10 +38,7 @@ export async function loadSessionFromBase64(sessionId, sessionPath) {
             throw new Error('Failed to decode session ID');
         }
         
-        // Ensure directory exists
         await fs.ensureDir(sessionPath);
-        
-        // Save credentials
         const credsPath = `${sessionPath}/creds.json`;
         await fs.writeJson(credsPath, credsData, { spaces: 2 });
         
@@ -42,3 +49,16 @@ export async function loadSessionFromBase64(sessionId, sessionPath) {
         return false;
     }
 }
+
+// Save credentials to Base64 session
+export async function saveCredsToBase64(credsPath, botName = 'GURU') {
+    try {
+        const credsData = await fs.readJson(credsPath);
+        return generateBase64Session(credsData, botName);
+    } catch (error) {
+        console.error('Error saving credentials to Base64:', error);
+        throw error;
+    }
+}
+
+export default generateBase64Session;

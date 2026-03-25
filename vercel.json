@@ -39,16 +39,5 @@
       "src": "/health",
       "dest": "/index.js"
     }
-  ],
-  "functions": {
-    "index.js": {
-      "maxDuration": 60
-    },
-    "pair.js": {
-      "maxDuration": 60
-    },
-    "qr.js": {
-      "maxDuration": 10
-    }
-  }
+  ]
 }

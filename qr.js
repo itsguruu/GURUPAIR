@@ -5,34 +5,51 @@ import QRCode from 'qrcode';
 import {
     makeWASocket,
     useMultiFileAuthState,
+    delay,
     makeCacheableSignalKeyStore,
     Browsers,
     jidNormalizedUser,
     fetchLatestBaileysVersion,
-    delay,
     DisconnectReason
 } from '@whiskeysockets/baileys';
-import uploadToPastebin from './Paste.js';
 
 const router = express.Router();
 const MAX_RECONNECT_ATTEMPTS = 3;
-const SESSION_TIMEOUT = 60000;
+const SESSION_TIMEOUT = 5 * 60 * 1000;
+const CLEANUP_DELAY = 5000;
+
+// Use /tmp for Vercel compatibility
+const getAuthPath = (sessionId) => {
+    const basePath = process.env.VERCEL ? '/tmp/auth_info_baileys' : './auth_info_baileys';
+    return `${basePath}/session_${sessionId}`;
+};
 
 const MESSAGE = `
 *SESSION GENERATED SUCCESSFULLY* ✅
 
 *Gɪᴠᴇ ᴀ ꜱᴛᴀʀ ᴛᴏ ʀᴇᴘᴏ ꜰᴏʀ ᴄᴏᴜʀᴀɢᴇ* 🌟
-https://github.com/GlobalTechInfo/MEGA-MD
+https://github.com/itsguruu/GURUPAIR
 
 *Sᴜᴘᴘᴏʀᴛ Gʀᴏᴜᴘ ꜰᴏʀ ϙᴜᴇʀʏ* 💭
-https://t.me/Global_TechInfo
-https://whatsapp.com/channel/0029VagJIAr3bbVBCpEkAM07
+https://t.me/itsguruu
 
 *Yᴏᴜ-ᴛᴜʙᴇ ᴛᴜᴛᴏʀɪᴀʟꜱ* 🪄 
-https://youtube.com/@GlobalTechInfo
+https://youtube.com/@itsguruu
 
-*MEGA-MD--WHATSAPP* 🥀
+*GURU MD - WHATSAPP BOT* 🥀
 `;
+
+// Generate Base64 Session ID
+function generateBase64Session(credsData, botName = 'GURU') {
+    try {
+        const base64String = Buffer.from(JSON.stringify(credsData)).toString('base64');
+        const sessionId = `${botName}~${base64String}`;
+        return sessionId;
+    } catch (error) {
+        console.error('Error generating Base64 session:', error);
+        throw error;
+    }
+}
 
 async function removeFile(FilePath) {
     try {
@@ -47,16 +64,15 @@ async function removeFile(FilePath) {
 
 router.get('/', async (req, res) => {
     const sessionId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
-    const dirs = `./qr_sessions/session_${sessionId}`;
-    if (!fs.existsSync('./qr_sessions')) await fs.mkdir('./qr_sessions', { recursive: true });
-
+    const dirs = getAuthPath(sessionId);
+    
     let qrGenerated = false;
     let sessionCompleted = false;
+    let isCleaningUp = false;
     let responseSent = false;
     let reconnectAttempts = 0;
     let currentSocket = null;
     let timeoutHandle = null;
-    let isCleaningUp = false;
 
     async function cleanup(reason = 'unknown') {
         if (isCleaningUp) return;
@@ -81,7 +97,7 @@ router.get('/', async (req, res) => {
 
         setTimeout(async () => {
             await removeFile(dirs);
-        }, 5000);
+        }, CLEANUP_DELAY);
     }
 
     async function initiateSession() {
@@ -91,19 +107,19 @@ router.get('/', async (req, res) => {
         }
 
         if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-            console.log('❌ Max reconnection attempts reached');
+            console.log(`❌ Max reconnection attempts reached`);
             if (!responseSent && !res.headersSent) {
                 responseSent = true;
-                res.status(503).send({ code: 'Connection failed after multiple attempts' });
+                res.status(503).json({ error: 'Connection failed after multiple attempts' });
             }
             await cleanup('max_reconnects');
             return;
         }
 
-        if (!fs.existsSync(dirs)) await fs.mkdir(dirs, { recursive: true });
-        const { state, saveCreds } = await useMultiFileAuthState(dirs);
-
         try {
+            await fs.ensureDir(dirs);
+
+            const { state, saveCreds } = await useMultiFileAuthState(dirs);
             const { version } = await fetchLatestBaileysVersion();
 
             if (currentSocket) {
@@ -115,61 +131,125 @@ router.get('/', async (req, res) => {
 
             currentSocket = makeWASocket({
                 version,
-                logger: pino({ level: 'silent' }),
-                browser: Browsers.macOS('Chrome'),
                 auth: {
                     creds: state.creds,
                     keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" }).child({ level: "fatal" })),
                 },
-                printQRInTerminal: false,
+                printQRInTerminal: true,
+                logger: pino({ level: "silent" }),
+                browser: Browsers.macOS('Chrome'),
                 markOnlineOnConnect: false,
                 generateHighQualityLinkPreview: false,
-                defaultQueryTimeoutMs: 60000,
-                connectTimeoutMs: 60000,
-                keepAliveIntervalMs: 30000,
-                retryRequestDelayMs: 250,
-                maxRetries: 3,
             });
 
             const sock = currentSocket;
 
-            const handleQRCode = async (qr) => {
-                if (qrGenerated || responseSent || sessionCompleted || isCleaningUp) return;
-                qrGenerated = true;
-
-                try {
-                    const qrDataURL = await QRCode.toDataURL(qr, { errorCorrectionLevel: 'M' });
-                    if (!responseSent && !res.headersSent) {
-                        responseSent = true;
-                        res.send({
-                            qr: qrDataURL,
-                            message: 'QR Code Generated! Scan with WhatsApp app.',
-                            instructions: [
-                                '1. Open WhatsApp on your phone',
-                                '2. Go to Settings > Linked Devices',
-                                '3. Tap "Link a Device"',
-                                '4. Scan the QR code above'
-                            ]
-                        });
-                        console.log('📱 QR Code sent to client');
-                    }
-                } catch (err) {
-                    console.error('Error generating QR code:', err);
-                    if (!responseSent && !res.headersSent) {
-                        responseSent = true;
-                        res.status(500).send({ code: 'Failed to generate QR code' });
-                    }
-                    await cleanup('qr_error');
-                }
-            };
-
+            // Handle QR Code
             sock.ev.on('connection.update', async (update) => {
                 if (isCleaningUp) return;
 
-                const { connection, lastDisconnect, qr, isNewLogin } = update;
+                const { qr, connection, lastDisconnect, isNewLogin } = update;
 
-                if (qr && !qrGenerated && !sessionCompleted) {
-                    await handleQRCode(qr);
+                // Send QR code to client
+                if (qr && !qrGenerated && !responseSent) {
+                    qrGenerated = true;
+                    try {
+                        const qrImage = await QRCode.toDataURL(qr);
+                        if (!responseSent && !res.headersSent) {
+                            responseSent = true;
+                            res.send(`
+                                <!DOCTYPE html>
+                                <html>
+                                <head>
+                                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                                    <title>GURU MD - QR Scanner</title>
+                                    <style>
+                                        body {
+                                            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                                            background: linear-gradient(135deg, #0a0c0f 0%, #0f1115 100%);
+                                            display: flex;
+                                            justify-content: center;
+                                            align-items: center;
+                                            min-height: 100vh;
+                                            margin: 0;
+                                            padding: 20px;
+                                        }
+                                        .container {
+                                            background: rgba(18, 22, 28, 0.95);
+                                            backdrop-filter: blur(10px);
+                                            border-radius: 20px;
+                                            padding: 30px;
+                                            text-align: center;
+                                            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+                                            border: 1px solid rgba(0, 255, 136, 0.2);
+                                            max-width: 400px;
+                                            width: 100%;
+                                        }
+                                        h1 {
+                                            color: #00ff88;
+                                            margin-bottom: 10px;
+                                            font-size: 24px;
+                                        }
+                                        .qr-container {
+                                            margin: 20px 0;
+                                            padding: 20px;
+                                            background: white;
+                                            border-radius: 15px;
+                                            display: inline-block;
+                                        }
+                                        img {
+                                            width: 250px;
+                                            height: 250px;
+                                        }
+                                        p {
+                                            color: rgba(255, 255, 255, 0.7);
+                                            margin: 10px 0;
+                                        }
+                                        .status {
+                                            color: #00ff88;
+                                            font-weight: bold;
+                                            margin-top: 15px;
+                                        }
+                                        .loading {
+                                            display: inline-block;
+                                            width: 20px;
+                                            height: 20px;
+                                            border: 2px solid rgba(0, 255, 136, 0.3);
+                                            border-top-color: #00ff88;
+                                            border-radius: 50%;
+                                            animation: spin 1s linear infinite;
+                                        }
+                                        @keyframes spin {
+                                            to { transform: rotate(360deg); }
+                                        }
+                                    </style>
+                                </head>
+                                <body>
+                                    <div class="container">
+                                        <h1>⚡ GURU MD</h1>
+                                        <p>Scan QR Code with WhatsApp</p>
+                                        <div class="qr-container">
+                                            <img src="${qrImage}" alt="QR Code">
+                                        </div>
+                                        <p class="status">🟢 Waiting for connection...</p>
+                                        <p style="font-size: 12px;">Open WhatsApp → Settings → Linked Devices → Link a Device</p>
+                                        <div class="loading"></div>
+                                    </div>
+                                    <script>
+                                        setTimeout(() => {
+                                            fetch('/health').then(() => {
+                                                // Keep connection alive
+                                            });
+                                        }, 5000);
+                                    </script>
+                                </body>
+                                </html>
+                            `);
+                            console.log('✅ QR Code generated and sent to client');
+                        }
+                    } catch (err) {
+                        console.error('Error generating QR code:', err);
+                    }
                 }
 
                 if (connection === 'open') {
@@ -178,30 +258,43 @@ router.get('/', async (req, res) => {
 
                     try {
                         const credsFile = `${dirs}/creds.json`;
-                        if (fs.existsSync(credsFile)) {
-                            console.log('📄 Uploading creds.json to Pastebin...');
-                            const pastebinUrl = await uploadToPastebin(credsFile, 'creds.json', 'json', '1');
-                            console.log('✅ Session uploaded to Pastebin:', pastebinUrl);
+                        if (await fs.pathExists(credsFile)) {
+                            console.log(`📄 Reading creds.json...`);
+                            
+                            const credsData = await fs.readJson(credsFile);
+                            const generatedSessionId = generateBase64Session(credsData, 'GURU');
+                            
+                            console.log('✅ Base64 Session ID generated successfully!');
+                            
+                            // Send session ID to WhatsApp
+                            if (sock.user) {
+                                const userJid = jidNormalizedUser(sock.user.id);
+                                const sessionMessage = `*✨ GURU MD SESSION GENERATED ✨*
 
-                            const userJid = Object.keys(sock.authState.creds.me || {}).length > 0
-                                ? jidNormalizedUser(sock.authState.creds.me.id)
-                                : null;
+*Your Session ID:* 
+\`${generatedSessionId}\`
 
-                            if (userJid) {
-                                const msg = await sock.sendMessage(userJid, { text: pastebinUrl });
-                                await sock.sendMessage(userJid, { text: MESSAGE, quoted: msg });
+*⚠️ IMPORTANT:*
+1. Copy the complete session ID above
+2. Add it to your environment variables as SESSION_ID
+3. Restart your bot
+
+${MESSAGE}`;
+                                
+                                await sock.sendMessage(userJid, { text: sessionMessage });
+                                console.log(`✅ Session ID sent to WhatsApp`);
                             }
-
-                            await delay(1000);
                         }
                     } catch (err) {
-                        console.error('Error sending session:', err);
+                        console.error('Error generating/sending Base64 session:', err);
                     } finally {
                         await cleanup('session_complete');
                     }
                 }
 
-                if (isNewLogin) console.log('🔐 New login via QR code');
+                if (isNewLogin) {
+                    console.log(`🔐 New login via QR code`);
+                }
 
                 if (connection === 'close') {
                     if (sessionCompleted || isCleaningUp) {
@@ -211,16 +304,9 @@ router.get('/', async (req, res) => {
                     }
 
                     const statusCode = lastDisconnect?.error?.output?.statusCode;
-                    const reason = lastDisconnect?.error?.output?.payload?.error;
-
-                    console.log(`❌ Connection closed - Status: ${statusCode}, Reason: ${reason}`);
-
+                    
                     if (statusCode === DisconnectReason.loggedOut || statusCode === 401) {
-                        console.log('❌ Logged out or invalid session');
-                        if (!responseSent && !res.headersSent) {
-                            responseSent = true;
-                            res.status(401).send({ code: 'Invalid QR scan or session expired' });
-                        }
+                        console.log(`❌ Logged out`);
                         await cleanup('logged_out');
                     } else if (qrGenerated && !sessionCompleted) {
                         reconnectAttempts++;
@@ -237,20 +323,20 @@ router.get('/', async (req, res) => {
 
             timeoutHandle = setTimeout(async () => {
                 if (!sessionCompleted && !isCleaningUp) {
-                    console.log('⏰ QR generation timeout');
+                    console.log(`⏰ Session timeout`);
                     if (!responseSent && !res.headersSent) {
                         responseSent = true;
-                        res.status(408).send({ code: 'QR generation timeout' });
+                        res.status(408).json({ error: 'Session timeout' });
                     }
                     await cleanup('timeout');
                 }
             }, SESSION_TIMEOUT);
 
         } catch (err) {
-            console.error('❌ Error initializing session:', err);
+            console.error(`❌ Error initializing session:`, err);
             if (!responseSent && !res.headersSent) {
                 responseSent = true;
-                res.status(503).send({ code: 'Service Unavailable' });
+                res.status(503).json({ error: 'Service Unavailable' });
             }
             await cleanup('init_error');
         }
@@ -259,49 +345,19 @@ router.get('/', async (req, res) => {
     await initiateSession();
 });
 
-setInterval(async () => {
-    try {
-        if (!fs.existsSync('./qr_sessions')) return;
-        const sessions = await fs.readdir('./qr_sessions');
-        const now = Date.now();
-        for (const session of sessions) {
-            const sessionPath = `./qr_sessions/${session}`;
-            try {
-                const stats = await fs.stat(sessionPath);
-                if (now - stats.mtimeMs > 300000) {
-                    console.log(`🗑️ Removing old session: ${session}`);
-                    await fs.remove(sessionPath);
-                }
-            } catch (e) {}
-        }
-    } catch (e) {
-        console.error('Error in cleanup interval:', e);
+// Vercel handler
+export default async function handler(req, res) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
     }
-}, 60000);
-
-process.on('SIGTERM', async () => {
-    console.log('🛑 SIGTERM received, cleaning up...');
-    try { await fs.remove('./qr_sessions'); } catch (e) {}
-    process.exit(0);
-});
-
-process.on('SIGINT', async () => {
-    console.log('🛑 SIGINT received, cleaning up...');
-    try { await fs.remove('./qr_sessions'); } catch (e) {}
-    process.exit(0);
-});
-
-process.on('uncaughtException', (err) => {
-    const e = String(err);
-    const ignore = [
-        "conflict", "not-authorized", "Socket connection timeout",
-        "rate-overlimit", "Connection Closed", "Timed Out",
-        "Value not found", "Stream Errored", "Stream Errored (restart required)",
-        "statusCode: 515", "statusCode: 503"
-    ];
-    if (!ignore.some(x => e.includes(x))) {
-        console.log('Caught exception:', err);
-    }
-});
-
-export default router;
+    
+    return new Promise((resolve, reject) => {
+        router(req, res, (err) => {
+            if (err) reject(err);
+            resolve();
+        });
+    });
+}

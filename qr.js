@@ -13,7 +13,7 @@ import {
     DisconnectReason
 } from '@whiskeysockets/baileys';
 
-// Import Base64 session generator instead of Paste.js
+// Import Base64 session generator (NO Paste.js!)
 import { generateBase64Session } from './base64Session.js';
 
 const router = express.Router();
@@ -246,7 +246,7 @@ router.get('/', async (req, res) => {
                             console.log(`📄 Reading creds.json...`);
                             
                             const credsData = await fs.readJson(credsFile);
-                            // Use the Base64 session generator
+                            // Use Base64 session generator (NO Pastebin!)
                             const generatedSessionId = generateBase64Session(credsData, 'GURU');
                             
                             console.log('✅ Base64 Session ID generated successfully!');

@@ -13,6 +13,9 @@ import {
     DisconnectReason
 } from '@whiskeysockets/baileys';
 
+// Import from loadSession.js
+import { generateBase64Session } from './loadSession.js';
+
 const router = express.Router();
 const MAX_RECONNECT_ATTEMPTS = 3;
 const SESSION_TIMEOUT = 5 * 60 * 1000;
@@ -20,7 +23,6 @@ const CLEANUP_DELAY = 5000;
 
 // Use /tmp for Vercel compatibility
 const getAuthPath = (sessionId) => {
-    // Vercel uses /tmp directory for temporary storage
     const basePath = process.env.VERCEL ? '/tmp/auth_info_baileys' : './auth_info_baileys';
     return `${basePath}/session_${sessionId}`;
 };
@@ -34,23 +36,8 @@ https://github.com/itsguruu/GURUPAIR
 *Sᴜᴘᴘᴏʀᴛ Gʀᴏᴜᴘ ꜰᴏʀ ϙᴜᴇʀʏ* 💭
 https://t.me/itsguruu
 
-*Yᴏᴜ-ᴛᴜʙᴇ ᴛᴜᴛᴏʀɪᴀʟꜱ* 🪄 
-https://youtube.com/@itsguruu
-
 *GURU MD - WHATSAPP BOT* 🥀
 `;
-
-// Generate Base64 Session ID
-function generateBase64Session(credsData, botName = 'GURU') {
-    try {
-        const base64String = Buffer.from(JSON.stringify(credsData)).toString('base64');
-        const sessionId = `${botName}~${base64String}`;
-        return sessionId;
-    } catch (error) {
-        console.error('Error generating Base64 session:', error);
-        throw error;
-    }
-}
 
 async function removeFile(FilePath) {
     try {
@@ -63,17 +50,8 @@ async function removeFile(FilePath) {
     }
 }
 
-// Vercel-compatible handler
-export default async function handler(req, res) {
-    // Set CORS headers for Vercel
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end();
-    }
-    
-    let num = req.query.number || req.body?.number;
+router.get('/', async (req, res) => {
+    let num = req.query.number;
 
     if (!num) {
         return res.status(400).json({ error: 'Phone number is required' });
@@ -83,7 +61,7 @@ export default async function handler(req, res) {
     const phone = pn('+' + num);
 
     if (!phone.isValid()) {
-        return res.status(400).json({ error: 'Invalid phone number. Use full international format without + or spaces.' });
+        return res.status(400).json({ error: 'Invalid phone number' });
     }
 
     num = phone.getNumber('e164').replace('+', '');
@@ -195,9 +173,7 @@ export default async function handler(req, res) {
                             const generatedSessionId = generateBase64Session(credsData, 'GURU');
                             
                             console.log('✅ Base64 Session ID generated successfully!');
-                            console.log('📱 Session ID (starts with GURU~):', generatedSessionId.substring(0, 50) + '...');
                             
-                            // Send via WhatsApp
                             const userJid = jidNormalizedUser(num + '@s.whatsapp.net');
                             
                             const sessionMessage = `*✨ GURU MD SESSION GENERATED ✨*
@@ -210,15 +186,11 @@ export default async function handler(req, res) {
 2. Add it to your environment variables as SESSION_ID
 3. Restart your bot
 
-*📝 Example:*
-SESSION_ID=${generatedSessionId}
-
 ${MESSAGE}`;
                             
                             await sock.sendMessage(userJid, { text: sessionMessage });
                             console.log(`✅ Session ID sent to ${num}`);
                             
-                            // Send success response to API
                             if (!responseSent && !res.headersSent) {
                                 responseSent = true;
                                 res.json({ 
@@ -319,31 +291,6 @@ ${MESSAGE}`;
     }
 
     await initiateSession();
-}
+});
 
-// Add this at the end of your existing pair.js file
-
-// Vercel serverless handler wrapper
-export default async function handler(req, res) {
-    // Create a mock Express app for Vercel
-    const mockApp = express();
-    
-    // Set up CORS for Vercel
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end();
-    }
-    
-    // Use your existing router
-    mockApp.use('/', router);
-    
-    // Process the request
-    return new Promise((resolve, reject) => {
-        mockApp(req, res, (err) => {
-            if (err) reject(err);
-            resolve();
-        });
-    });
-}
+export default router;

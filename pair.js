@@ -320,3 +320,30 @@ ${MESSAGE}`;
 
     await initiateSession();
 }
+
+// Add this at the end of your existing pair.js file
+
+// Vercel serverless handler wrapper
+export default async function handler(req, res) {
+    // Create a mock Express app for Vercel
+    const mockApp = express();
+    
+    // Set up CORS for Vercel
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
+    
+    // Use your existing router
+    mockApp.use('/', router);
+    
+    // Process the request
+    return new Promise((resolve, reject) => {
+        mockApp(req, res, (err) => {
+            if (err) reject(err);
+            resolve();
+        });
+    });
+}

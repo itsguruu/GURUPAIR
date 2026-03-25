@@ -28,11 +28,11 @@
       "dest": "/pair.js"
     },
     {
-      "src": "/qrpage",
-      "dest": "/index.js"
+      "src": "/qr",
+      "dest": "/qr.js"
     },
     {
-      "src": "/qr",
+      "src": "/qrpage",
       "dest": "/qr.js"
     },
     {
@@ -42,19 +42,13 @@
   ],
   "functions": {
     "index.js": {
-      "maxDuration": 60,
-      "memory": 1024
+      "maxDuration": 60
     },
     "pair.js": {
-      "maxDuration": 60,
-      "memory": 1024
+      "maxDuration": 60
     },
     "qr.js": {
-      "maxDuration": 60,
-      "memory": 1024
+      "maxDuration": 10
     }
-  },
-  "env": {
-    "VERCEL": "1"
   }
 }
